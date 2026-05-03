@@ -1,18 +1,18 @@
 name: Update Lottery Image
 on:
-  workflow_dispatch:  # 支持手动触发
+  workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'  # 每6小时自动跑一次
+    - cron: '0 */6 * * *'
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # 强制拉取到当前目录，不嵌套
+          path: .
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -22,16 +22,21 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 如果你的脚本需要额外依赖，比如 Pillow，就在这里加上
-          pip install pillow
+          pip install pillow requests
 
-      - name: Run your script
-        run: python generate_3d.py  # 这里改成了你实际的脚本名
+      - name: Verify files exist
+        run: |
+          ls -la
+          echo "Checking generate_3d.py..."
+          test -f generate_3d.py && echo "✅ Found generate_3d.py" || echo "❌ Not found"
 
-      - name: Commit and push changes
+      - name: Run the script
+        run: python generate_3d.py
+
+      - name: Commit and push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "Auto update lottery image" || echo "No changes to commit"
+          git commit -m "Auto update" || echo "No changes to commit"
           git push
