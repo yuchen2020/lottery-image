@@ -1,43 +1,39 @@
-name: Lottery Image Auto Update
-
+name: Generate Lottery Image
 on:
+  workflow_dispatch:
   schedule:
-    # 北京时间每天21:30 = UTC 13:30
-    - cron: '30 13 * * *'
-  workflow_dispatch:   # 允许手动触发
-
-# 我加的 —— 解决权限
-permissions:
-  contents: write
+    - cron: '0 13 * * *'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: 检出仓库
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: 安装中文字体
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y fonts-wqy-microhei
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    - name: 安装 Python 依赖
-      run: |
-        pip install requests Pillow urllib3
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pillow
 
-    - name: 生成彩票图片
-      run: python lottery_gen.py
+      # ========== 这两行是关键：给 GitHub 加国内代理，解决访问失败 ==========
+      - name: 配置国内网络加速
+        run: |
+          echo "HTTP_PROXY=http://129.154.210.12:7777" >> $GITHUB_ENV
+          echo "HTTPS_PROXY=http://129.154.210.12:7777" >> $GITHUB_ENV
 
-    # 我加的 —— 解决找不到文件
-    - name: 确保图片文件存在
-      run: touch lottery_result.png
+      - name: Generate image
+        run: python lottery_gen.py
 
-    - name: 提交图片到仓库
-      run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        git add lottery_result.png
-        git commit -m "🔄 自动更新开奖图片 $(date +'%Y-%m-%d %H:%M')" || echo "没有变化"
-        git push
+      - name: Commit and push
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add lottery_result.png
+          git commit -m "Auto update image"
+          git push
