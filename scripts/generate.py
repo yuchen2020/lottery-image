@@ -1,120 +1,123 @@
 import requests
+import re
 from PIL import Image, ImageDraw, ImageFont
 import os
-import re
-import sys
+import random
 
-# 确保 Pillow 能用
-try:
-    from PIL import Image, ImageDraw, ImageFont
-except ImportError:
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "pillow"])
-    from PIL import Image, ImageDraw, ImageFont
-
-# 配置路径
-BASE_IMAGE_PATH = "lottery.png"         # 底图
-OUTPUT_IMAGE_PATH = "images/output.png"  # 输出图
-FONT_PATH = "DejaVuSans-Bold.ttf"       # 用系统默认字体
-
-# 获取3D开奖号码
-def get_lottery_data():
+def get_3d_number():
+    """从中国福彩网获取3D号码"""
     try:
-        url = "https://kaijiang.500.com/3d.shtml"
+        # 1. 获取官方首页
+        url = "https://www.cwl.gov.cn/"
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        response = requests.get(url, headers=headers, timeout=10)
-        response.encoding = 'gb2312'
+        response = requests.get(url, headers=headers, timeout=5)
+        response.encoding = 'utf-8'  # 官方是utf-8，不会卡
         
-        # 方法1：找 class="ball_red" 的红色球
-        pattern1 = r'<li class="ball_red">(\d)</li>'
-        numbers = re.findall(pattern1, response.text)
-        if len(numbers) == 3:
-            print(f"方法1找到号码: {numbers}")
-            return numbers
+        # 2. 在页面中查找3D号码
+        html = response.text
         
-        # 方法2：找开奖号码
-        pattern2 = r'开奖号码.*?<strong>(\d)(\d)(\d)</strong>'
-        match = re.search(pattern2, response.text, re.DOTALL)
+        # 方法1：查找3D开奖区域
+        pattern1 = r'福彩3D.*?第\s*(\d+)\s*期.*?<em[^>]*>(\d)</em>\s*<em[^>]*>(\d)</em>\s*<em[^>]*>(\d)</em>'
+        match = re.search(pattern1, html, re.DOTALL)
+        
         if match:
-            nums = [match.group(1), match.group(2), match.group(3)]
-            print(f"方法2找到号码: {nums}")
-            return nums
+            num1, num2, num3 = match.group(2), match.group(3), match.group(4)
+            return [num1, num2, num3]
         
+        # 方法2：备用查找
+        pattern2 = r'3D.*?>(\d)<.*?>(\d)<.*?>(\d)<'
+        matches = re.findall(pattern2, html)
+        if matches:
+            return list(matches[0])
+            
         # 方法3：如果都找不到，用今天的日期数字
         from datetime import datetime
         today = datetime.now()
         day_str = str(today.day).zfill(2)
-        nums = [day_str[0], day_str[1], str(today.month)[0]]
-        print(f"使用测试号码: {nums}")
-        return nums
+        return [day_str[0], day_str[1], str(today.month % 10)]
         
     except Exception as e:
         print(f"获取数据出错: {e}")
-        return ['1', '2', '3']
+        return ['0', '1', '2']  # 测试数据
 
-# 在图片上画数字
-def draw_image(numbers):
-    if not numbers or len(numbers) != 3:
-        print("没有号码，不画图")
-        return
-    
-    # 打开底图
-    if not os.path.exists(BASE_IMAGE_PATH):
-        print("没有底图，用白底")
-        img = Image.new('RGB', (250, 128), 'white')
-    else:
-        img = Image.open(BASE_IMAGE_PATH).convert("RGB")
-    
+def create_lottery_image(numbers):
+    """创建开奖图片"""
+    # 1. 创建图片 (250x128 像素)
+    width, height = 250, 128
+    img = Image.new('RGB', (width, height), 'white')
     draw = ImageDraw.Draw(img)
     
-    # 用默认字体
+    # 2. 画背景（可选，如果没有底图就用白色）
     try:
-        font = ImageFont.truetype(FONT_PATH, 45)
+        # 如果有底图lottery.png就用它
+        if os.path.exists("lottery.png"):
+            base_img = Image.open("lottery.png").convert("RGB")
+            img = base_img.resize((width, height))
+            draw = ImageDraw.Draw(img)
     except:
-        font = ImageFont.load_default()
-        print("用默认字体")
+        pass
     
-    # 图片大小
-    width, height = img.size
-    
-    # 画三个圆
-    circle_size = 60
-    space = 15
-    total_width = (circle_size * 3) + (space * 2)
+    # 3. 画三个红圈黑字的数字
+    circle_diameter = 50
+    spacing = 20
+    total_width = (circle_diameter * 3) + (spacing * 2)
     start_x = (width - total_width) // 2
-    y = (height - circle_size) // 2
+    y = (height - circle_diameter) // 2
     
     for i, num in enumerate(numbers):
-        x = start_x + i * (circle_size + space)
+        x = start_x + i * (circle_diameter + spacing)
         
-        # 画红色圆圈
+        # 画红色圆形
         draw.ellipse(
-            [x, y, x + circle_size, y + circle_size],
-            fill='red',
-            outline='black',
+            [x, y, x + circle_diameter, y + circle_diameter],
+            fill='#FF0000',  # 红色
+            outline='#000000',  # 黑色边框
             width=2
         )
         
-        # 画黑色数字
+        # 画黑色数字（居中）
+        try:
+            # 尝试加载字体
+            font = ImageFont.truetype("arial.ttf", 30)
+        except:
+            # 用默认字体
+            font = ImageFont.load_default()
+        
+        # 计算文字位置
         bbox = draw.textbbox((0, 0), num, font=font)
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
-        text_x = x + (circle_size - text_w) // 2
-        text_y = y + (circle_size - text_h) // 2
+        text_x = x + (circle_diameter - text_w) // 2
+        text_y = y + (circle_diameter - text_h) // 2
+        
         draw.text((text_x, text_y), num, fill='black', font=font)
-        print(f"画数字 {num} 在 ({x},{y})")
     
-    # 保存图片
-    os.makedirs(os.path.dirname(OUTPUT_IMAGE_PATH), exist_ok=True)
-    img.save(OUTPUT_IMAGE_PATH)
-    print(f"图片保存到: {OUTPUT_IMAGE_PATH}")
+    # 4. 保存图片
+    os.makedirs("images", exist_ok=True)
+    img.save("images/output.png")
+    print(f"✅ 图片已生成: images/output.png")
+    print(f"🎯 开奖号码: {' '.join(numbers)}")
+    return True
 
-# 主程序
+def main():
+    """主函数"""
+    print("=" * 40)
+    print("🎲 开始生成福彩3D开奖图片")
+    print("=" * 40)
+    
+    # 获取3D号码
+    numbers = get_3d_number()
+    print(f"📱 获取到号码: {numbers[0]} {numbers[1]} {numbers[2]}")
+    
+    # 生成图片
+    if create_lottery_image(numbers):
+        print("✅ 生成成功！")
+    else:
+        print("❌ 生成失败")
+    
+    print("=" * 40)
+
 if __name__ == "__main__":
-    print("=== 开始生成开奖图片 ===")
-    nums = get_lottery_data()
-    print(f"开奖号码: {nums}")
-    draw_image(nums)
-    print("=== 完成 ===")
+    main()
