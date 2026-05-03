@@ -8,10 +8,11 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v5
         with:
-          # 强制拉取到当前目录，不嵌套
+          ref: main
+          fetch-depth: 0
           path: .
 
       - name: Set up Python
@@ -24,19 +25,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install pillow requests
 
-      - name: Verify files exist
+      - name: Debug file list
         run: |
+          echo "Current directory: $(pwd)"
           ls -la
-          echo "Checking generate_3d.py..."
-          test -f generate_3d.py && echo "✅ Found generate_3d.py" || echo "❌ Not found"
 
-      - name: Run the script
+      - name: Run script
         run: python generate_3d.py
 
-      - name: Commit and push
+      - name: Commit changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "Auto update" || echo "No changes to commit"
+          git commit -m "Auto update" || echo "No changes"
           git push
