@@ -8,7 +8,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -21,13 +21,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests pillow
 
-      # ========== 这两行是关键：给 GitHub 加国内代理，解决访问失败 ==========
-      - name: 配置国内网络加速
-        run: |
-          echo "HTTP_PROXY=http://129.154.210.12:7777" >> $GITHUB_ENV
-          echo "HTTPS_PROXY=http://129.154.210.12:7777" >> $GITHUB_ENV
-
-      - name: Generate image
+      - name: Run script
         run: python lottery_gen.py
 
       - name: Commit and push
@@ -35,5 +29,5 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add lottery_result.png
-          git commit -m "Auto update image"
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto update image"
           git push
