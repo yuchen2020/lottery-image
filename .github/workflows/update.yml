@@ -22,8 +22,7 @@ jobs:
           pip install requests pillow
 
       - name: 运行开奖图片生成脚本
-        run: python generate_3d.py
-
+        run: python ./generate_3d.py
       - name: 提交更新后的图片
         run: |
           git config --local user.email "github-action@example.com"
