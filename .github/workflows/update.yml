@@ -1,4 +1,5 @@
 name: Auto Update Lottery Image
+
 on:
   schedule:
     - cron: '30 13 * * *'  # 北京时间 21:30 自动运行
@@ -22,11 +23,15 @@ jobs:
           pip install requests pillow
 
       - name: 运行开奖图片生成脚本
-        run: python ./generate_3d.py
+        working-directory: ./
+        run: |
+          ls -la
+          python generate_3d.py
+
       - name: 提交更新后的图片
         run: |
           git config --local user.email "github-action@example.com"
-          git config --local user.name "GitHub Action Bot"
-          git add 3d_result.png
-          git commit -m "Auto update lottery image" || echo "No changes"
+          git config --local user.name "GitHub Action"
+          git add 3d_result.png || true
+          git commit -m "Auto update lottery image" || true
           git push
