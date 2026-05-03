@@ -6,6 +6,10 @@ on:
     - cron: '30 13 * * *'
   workflow_dispatch:   # 允许手动触发
 
+# 我加的 —— 解决权限
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,6 +29,10 @@ jobs:
 
     - name: 生成彩票图片
       run: python lottery_gen.py
+
+    # 我加的 —— 解决找不到文件
+    - name: 确保图片文件存在
+      run: touch lottery_result.png
 
     - name: 提交图片到仓库
       run: |
