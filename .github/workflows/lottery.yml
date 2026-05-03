@@ -1,33 +1,35 @@
-name: Update Lottery Image
+name: 自动更新3D开奖图片
 
 on:
   schedule:
-    - cron: '30 13 * * *'  # 每天 21:30 北京时间
-  workflow_dispatch:      # 允许手动触发
+    - cron: '30 13 * * *'  # 每天21:30运行（北京时间）
+  workflow_dispatch:       # 允许手动运行
 
 jobs:
-  build:
+  update-image:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: 拉取代码
+      - name: 📥 下载代码
         uses: actions/checkout@v3
-
-      - name: 设置 Python
+        
+      - name: 🐍 设置Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-
-      - name: 安装依赖
+          
+      - name: 📦 安装依赖
         run: |
           python -m pip install --upgrade pip
           pip install requests pillow
-
-      - name: 生成开奖图片
+          
+      - name: 🎲 生成开奖图片
         run: python scripts/generate.py
-
-      - name: 上传图片
-        uses: actions/upload-artifact@v3
-        with:
-          name: lottery-result
-          path: images/output.png
+        
+      - name: 💾 上传到仓库
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add images/output.png
+          git commit -m "更新3D开奖图片 $(date '+%Y-%m-%d %H:%M')" || echo "没有变更"
+          git push
