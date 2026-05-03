@@ -28,6 +28,11 @@ jobs:
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add lottery_result.png
-          git diff --quiet && git diff --staged --quiet || git commit -m "Auto update image"
-          git push
+          # 只有文件存在才 add，避免报错
+          if [ -f lottery_result.png ]; then
+            git add lottery_result.png
+            # 只有改动才 commit
+            git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update image" && git push)
+          else
+            echo "lottery_result.png 不存在，跳过提交"
+          fi
