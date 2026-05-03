@@ -22,11 +22,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests pillow
 
-      - name: Run script
+      - name: Run script with full path
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Files in directory:"
-          ls -la
+          cd /home/runner/work/lottery-image/lottery-image/
           python generate_3d.py
 
       - name: Commit and push
